@@ -16,7 +16,7 @@ class TerminalService {
 
     func getFrontFinderPath() -> String? {
         // 1) 前台窗口
-        let s1 = """
+        let scpt = """
         tell application "Finder"
             if (count of windows) > 0 then
                 return POSIX path of (target of front window as alias)
@@ -25,24 +25,8 @@ class TerminalService {
             end if
         end tell
         """
-        if let r1 = runAppleScript(s1), let p = r1.stringValue, !p.isEmpty {
-            return p
-        }
-
-        // 2) 选中项（无窗口时）
-        let s2 = """
-        tell application "Finder"
-            set sel to selection
-            if sel is {} then return POSIX path of (desktop as alias)
-            set firstItem to item 1 of sel
-            if (class of firstItem is folder) then
-                return POSIX path of (firstItem as alias)
-            else
-                return POSIX path of (container of firstItem as alias)
-            end if
-        end tell
-        """
-        return runAppleScript(s2)?.stringValue
+        let result = runAppleScript(scpt)?.stringValue
+        return result?.isEmpty == true ? nil : result // nil || "" return nil
     }
 
     // MARK: - 打开不同终端
@@ -53,6 +37,21 @@ class TerminalService {
         tell application "Terminal"
             activate
             do script "cd \\\"\(path)\\\""
+        end tell
+        """
+        return runAppleScript(scpt) != nil
+    }
+
+    @discardableResult
+    func openInGhostty(path _: String) -> Bool {
+        let scpt = """
+        tell application "Ghostty"
+            if it is running then
+                activate
+                tell application "System Events" to keystroke "n" using {command down}
+            else
+                activate
+            end if
         end tell
         """
         return runAppleScript(scpt) != nil

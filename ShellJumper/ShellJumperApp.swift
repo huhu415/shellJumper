@@ -36,6 +36,7 @@ struct ShellJumperApp: App {
 
         // 选择终端
         terminalService.openInTerminal(path: path)
+        // terminalService.openInGhostty(path: path)
         // terminalService.openInITerm(path: path)
         // terminalService.openInWarp(path: path)
         // terminalService.openInWezTerm(path: path)
