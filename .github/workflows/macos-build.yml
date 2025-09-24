@@ -1,0 +1,52 @@
+name: macOS App Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*.*.*
+  workflow_dispatch:  # 同时保留手动触发选项
+
+env:
+  SCHEME: "ShellJumper"
+  PROJECT: "ShellJumper.xcodeproj"
+  CONFIG: "Release"
+  DERIVED_DATA_PATH: "build"
+  APP_NAME: "ShellJumper.app"
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          xcodebuild -project ${{ env.PROJECT }} \
+                     -scheme ${{ env.SCHEME }} \
+                     -configuration ${{ env.CONFIG }} \
+                     -derivedDataPath ${{ env.DERIVED_DATA_PATH }} \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     MACOSX_DEPLOYMENT_TARGET=15.5 \
+                     build
+
+      - name: Package app bundle
+        env:
+          BUILD_DIR: ${{ env.DERIVED_DATA_PATH }}/Build/Products/${{ env.CONFIG }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          cd $BUILD_DIR
+          pwd
+          ls -al
+          tar -czf ShellJumper_${{ github.ref_name }}.tar.gz ShellJumper.app
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: github.ref_type == 'tag'
+        with:
+          files: ${{ env.DERIVED_DATA_PATH }}/Build/Products/${{ env.CONFIG }}/ShellJumper_${{ github.ref_name }}.tar.gz
+          token: ${{ secrets.GITHUB_TOKEN }}
