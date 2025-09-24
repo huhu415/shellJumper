@@ -1,0 +1,12 @@
+{
+  "colors" : [
+    {
+      "filename" : "ShellJumperIcon.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
