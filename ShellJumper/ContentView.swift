@@ -14,24 +14,25 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 16) {
             Button("在当前 Finder 目录打开 Terminal") {
-                let path =
-                    terminalService.getFrontFinderPath() ?? NSHomeDirectory()
-                let ok = terminalService.openInTerminal(path: path)
-                log =
-                    (ok ? "✅ 已尝试在 Terminal 打开：\(path)" : "❌ 打开失败，见 Xcode 控制台日志")
+                let path = terminalService.getFrontFinderPath() ?? NSHomeDirectory()
+                let terminalSelection = ConfigManager.shared.terminal // 使用用户配置
+                let ok = terminalService.open(path: path, using: terminalSelection) // 使用 .open 方法
+                log = (ok ? "✅ 已尝试在 \(terminalSelection.displayName) 打开：\(path)" : "❌ 打开失败，见 Xcode 控制台日志")
             }
             .buttonStyle(.borderedProminent)
-
-            Button("仅测试：打开 ~ (Home)") {
-                let home = NSHomeDirectory()
-                let ok = terminalService.openInTerminal(path: home)
-                log =
-                    (ok ? "✅ 已尝试在 Terminal 打开：\(home)" : "❌ 打开失败，见 Xcode 控制台日志")
-            }
 
             Divider()
 
             HStack(spacing: 12) {
+                Button("Ghostty") {
+                    let path =
+                        terminalService.getFrontFinderPath()
+                            ?? NSHomeDirectory()
+                    let ok = terminalService.openInGhostty(path: path)
+                    log = (ok ? "✅ 已尝试在 Ghostty 打开：\(path)" : "❌ 打开失败，请确保已安装 Ghostty")
+                }
+                .buttonStyle(.bordered)
+
                 Button("iTerm2") {
                     let path =
                         terminalService.getFrontFinderPath()
@@ -65,16 +66,6 @@ struct ContentView: View {
                 }
                 .buttonStyle(.bordered)
             }
-
-            Button("同时打开 VS Code") {
-                let path =
-                    terminalService.getFrontFinderPath() ?? NSHomeDirectory()
-                let terminalOk = terminalService.openInTerminal(path: path)
-                let codeOk = terminalService.openVSCode(path: path)
-                log =
-                    "Terminal: \(terminalOk ? "✅" : "❌") VS Code: \(codeOk ? "✅" : "❌") 路径：\(path)"
-            }
-            .buttonStyle(.bordered)
 
             Text(log)
                 .font(.footnote)

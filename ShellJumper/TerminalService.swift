@@ -102,6 +102,22 @@ class TerminalService {
         return false
     }
 
+    @discardableResult
+    func open(path: String, using selection: Terminal) -> Bool {
+        switch selection {
+        case .terminal:
+            openInTerminal(path: path)
+        case .iterm2:
+            openInITerm(path: path)
+        case .ghostty:
+            openInGhostty(path: path)
+        case .warp:
+            openInWarp(path: path)
+        case .wezterm:
+            openInWezTerm(path: path)
+        }
+    }
+
     // （可选）VS Code
     @discardableResult
     func openVSCode(path: String) -> Bool {

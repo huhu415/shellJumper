@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import OSLog
 import SwiftUI
 
@@ -32,14 +33,13 @@ struct ShellJumperApp: App {
         }
 
         let terminalService = TerminalService.shared
+        let terminalSelection = ConfigManager.shared.terminal
         let path = terminalService.getFrontFinderPath() ?? NSHomeDirectory()
 
         // 选择终端
-        terminalService.openInTerminal(path: path)
-        // terminalService.openInGhostty(path: path)
-        // terminalService.openInITerm(path: path)
-        // terminalService.openInWarp(path: path)
-        // terminalService.openInWezTerm(path: path)
+        if !terminalService.open(path: path, using: terminalSelection) {
+            logger.error("Failed to open \(terminalSelection.rawValue, privacy: .public); no fallback applied")
+        }
 
         // （可选）顺带打开 VS Code
         // terminalService.openVSCode(path: path)
@@ -61,8 +61,25 @@ struct ShellJumperApp: App {
         }
         .windowResizability(.contentSize)
         Settings {
-            EmptyView()
+            SettingsView()
         }
+    }
+}
+
+struct SettingsView: View {
+    @ObservedObject private var configManager = ConfigManager.shared
+
+    var body: some View {
+        Form {
+            Picker("默认终端", selection: $configManager.terminal) {
+                ForEach(Terminal.allCases) { option in
+                    Text(option.displayName).tag(option)
+                }
+            }
+            .pickerStyle(.radioGroup)
+        }
+        .padding(20)
+        .frame(width: 320)
     }
 }
 
