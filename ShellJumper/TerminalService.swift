@@ -35,26 +35,26 @@ class TerminalService {
     func openInTerminal(path: String) -> Bool {
         let scpt = """
         tell application "Terminal"
-            activate
             do script "cd \\\"\(path)\\\""
+            activate
         end tell
         """
         return runAppleScript(scpt) != nil
     }
 
     @discardableResult
-    func openInGhostty(path _: String) -> Bool {
-        let scpt = """
-        tell application "Ghostty"
-            if it is running then
-                activate
-                tell application "System Events" to keystroke "n" using {command down}
-            else
-                activate
-            end if
-        end tell
-        """
-        return runAppleScript(scpt) != nil
+    func openInGhostty(path: String) -> Bool {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
+        task.arguments = ["-lc", "open -a 'Ghostty' \(path)"]
+        do {
+            try task.run()
+            task.waitUntilExit()
+            return task.terminationStatus == 0
+        } catch {
+            print("Error opening Ghostty: \(error)")
+            return false
+        }
     }
 
     @discardableResult
