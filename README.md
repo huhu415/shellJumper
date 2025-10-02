@@ -14,3 +14,7 @@ Whenever you are browsing a folder in Finder, click the ShellJumper button in th
 [ ] Allow choosing among different terminals for the active path (iTerm2, Warp, Ghostty, WezTerm, etc.).
 
 [ ] Add quick actions to open the path in editors like Cursor, Zed, and VS Code.
+
+> If macOS warns that "ShellJumper.app is damaged and can't be opened," clear the quarantine flag from Terminal:
+- `xattr -l /Applications/ShellJumper.app` Check if quarantine flag exists
+- `xattr -dr com.apple.quarantine /Applications/ShellJumper.app` Remove quarantine flag
