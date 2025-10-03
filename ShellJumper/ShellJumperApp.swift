@@ -10,6 +10,10 @@ import Combine
 import OSLog
 import SwiftUI
 
+extension Logger {
+    static let shellJumperMain = Logger(subsystem: "com.huhu.ShellJumper", category: "main")
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_: NSApplication) -> Bool {
         true
@@ -19,8 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct ShellJumperApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-    let logger = Logger(subsystem: "com.huhu.ShellJumper", category: "main")
+    private let logger = Logger.shellJumperMain
     let showVisualInterface: Bool
 
     init() {
@@ -38,11 +41,8 @@ struct ShellJumperApp: App {
 
         // 选择终端
         if !terminalService.open(path: path, using: terminalSelection) {
-            logger.error("Failed to open \(terminalSelection.rawValue, privacy: .public); no fallback applied")
+            logger.error("Failed to open \(terminalSelection.displayName, privacy: .public); no fallback applied")
         }
-
-        // （可选）顺带打开 VS Code
-        // terminalService.openVSCode(path: path)
 
         // 退出应用
         DispatchQueue.main.async {

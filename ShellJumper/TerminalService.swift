@@ -6,9 +6,11 @@
 //
 
 import Cocoa
+import OSLog
 
 class TerminalService {
     static let shared = TerminalService()
+    private let logger = Logger.shellJumperMain
 
     private init() {}
 
@@ -20,8 +22,6 @@ class TerminalService {
         tell application "Finder"
             if (count of windows) > 0 then
                 return POSIX path of (target of front window as alias)
-            else
-                return ""
             end if
         end tell
         """
@@ -52,7 +52,7 @@ class TerminalService {
             task.waitUntilExit()
             return task.terminationStatus == 0
         } catch {
-            print("Error opening Ghostty: \(error)")
+            logger.error("Error opening Ghostty: \(error)")
             return false
         }
     }
@@ -84,7 +84,7 @@ class TerminalService {
             try task.run()
             return true
         } catch {
-            print("Error opening WezTerm: \(error)")
+            logger.error("Error opening WezTerm: \(error)")
             return false
         }
     }
@@ -131,7 +131,7 @@ class TerminalService {
             try task.run()
             return true
         } catch {
-            print("Error opening VS Code: \(error)")
+            logger.error("Error opening VS Code: \(error)")
             return false
         }
     }
@@ -144,7 +144,7 @@ class TerminalService {
         let result = script?.executeAndReturnError(&err)
 
         if let error = err {
-            print("AppleScript error: \(error)")
+            logger.error("AppleScript error: \(error)")
         }
 
         return result
