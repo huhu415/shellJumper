@@ -8,145 +8,112 @@
 import Cocoa
 import OSLog
 
-class TerminalService {
-    static let shared = TerminalService()
-    private let logger = Logger.shellJumperMain
+private let logger = Logger.shellJumperMain
 
-    private init() {}
+enum Terminal: String, CaseIterable, Identifiable {
+    case terminal, iterm2, ghostty, warp, wezterm
 
-    // MARK: - Finder 前台路径获取
+    var id: String { rawValue }
 
-    func getFrontFinderPath() -> String? {
-        // 1) 前台窗口
-        let scpt = """
-        tell application "Finder"
-            if (count of windows) > 0 then
-                return POSIX path of (target of front window as alias)
-            end if
-        end tell
-        """
-        let result = runAppleScript(scpt)?.stringValue
-        return result?.isEmpty == true ? nil : result // nil || "" return nil
-    }
-
-    // MARK: - 打开不同终端
-
-    @discardableResult
-    func openInTerminal(path: String) -> Bool {
-        let scpt = """
-        tell application "Terminal"
-            do script "cd \\\"\(path)\\\""
-            activate
-        end tell
-        """
-        return runAppleScript(scpt) != nil
-    }
-
-    @discardableResult
-    func openInGhostty(path: String) -> Bool {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        task.arguments = ["-lc", "open -a 'Ghostty' \(path)"]
-        do {
-            try task.run()
-            task.waitUntilExit()
-            return task.terminationStatus == 0
-        } catch {
-            logger.error("Error opening Ghostty: \(error)")
-            return false
+    // 使用工厂方法，根据 enum 返回对应的实现类
+    private var implementation: TerminalProtocol {
+        switch self {
+        case .terminal: SystemTerminal()
+        case .iterm2: ITermTerminal()
+        case .ghostty: GhosttyTerminal()
+        case .warp: WarpTerminal()
+        case .wezterm: WezTermTerminal()
         }
     }
 
-    @discardableResult
-    func openInITerm(path: String) -> Bool {
-        let scpt = """
-        tell application "iTerm2"
-            activate
-            if (count of windows) = 0 then
-                create window with default profile
-            end if
-            tell current window
-                create tab with default profile
-                tell current session to write text "cd \\\"\(path)\\\""
-            end tell
-        end tell
-        """
-        return runAppleScript(scpt) != nil
+    func open(path: String) -> Bool {
+        implementation.open(path: path)
     }
+}
 
-    @discardableResult
-    func openInWezTerm(path: String) -> Bool {
-        // WezTerm 支持 open -a 打开到该目录
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        task.arguments = ["-a", "WezTerm", path]
-        do {
-            try task.run()
-            return true
-        } catch {
-            logger.error("Error opening WezTerm: \(error)")
-            return false
-        }
+func getFrontFinderPath() -> String? {
+    // 1) 前台窗口
+    let scpt = """
+    tell application "Finder"
+        if (count of windows) > 0 then
+            return POSIX path of (target of front window as alias)
+        end if
+    end tell
+    """
+    let result = runAppleScript(scpt)?.stringValue
+    return result?.isEmpty == true ? nil : result // nil || "" return nil
+}
+
+// MARK: - Protocol Definition (类似 Go 的 interface)
+
+protocol TerminalProtocol {
+    func open(path: String) -> Bool
+}
+
+/// 系统自带的 Terminal.app
+class SystemTerminal: TerminalProtocol {
+    func open(path: String) -> Bool {
+        openWithApp(named: "Terminal", path: path)
     }
+}
 
-    @discardableResult
-    func openInWarp(path: String) -> Bool {
+/// Ghostty 终端
+class GhosttyTerminal: TerminalProtocol {
+    func open(path: String) -> Bool {
+        openWithApp(named: "Ghostty", path: path)
+    }
+}
+
+/// iTerm2 终端
+class ITermTerminal: TerminalProtocol {
+    func open(path: String) -> Bool {
+        openWithApp(named: "iTerm", path: path)
+    }
+}
+
+/// Warp 终端
+class WarpTerminal: TerminalProtocol {
+    func open(path: String) -> Bool {
         // Warp 支持 deep-link
-        let encoded =
-            path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed)
-                ?? path
+        let encoded = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path
         if let url = URL(string: "warp-terminal://new?path=\(encoded)") {
             NSWorkspace.shared.open(url)
             return true
         }
         return false
     }
+}
 
-    @discardableResult
-    func open(path: String, using selection: Terminal) -> Bool {
-        switch selection {
-        case .terminal:
-            openInTerminal(path: path)
-        case .iterm2:
-            openInITerm(path: path)
-        case .ghostty:
-            openInGhostty(path: path)
-        case .warp:
-            openInWarp(path: path)
-        case .wezterm:
-            openInWezTerm(path: path)
-        }
+/// WezTerm 终端
+class WezTermTerminal: TerminalProtocol {
+    func open(path: String) -> Bool {
+        openWithApp(named: "WezTerm", path: path)
+    }
+}
+
+private func runAppleScript(_ source: String) -> NSAppleEventDescriptor? {
+    var err: NSDictionary?
+    let script = NSAppleScript(source: source)
+    let result = script?.executeAndReturnError(&err)
+
+    if let error = err {
+        logger.error("AppleScript error: \(error)")
     }
 
-    // （可选）VS Code
-    @discardableResult
-    func openVSCode(path: String) -> Bool {
-        let task = Process()
-        task.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        task.arguments = [
-            "bash", "-lc",
-            "cd \"\(path)\" && command -v code >/dev/null && code . || open -a 'Visual Studio Code' \"\(path)\"",
-        ]
-        do {
-            try task.run()
-            return true
-        } catch {
-            logger.error("Error opening VS Code: \(error)")
-            return false
-        }
-    }
+    return result
+}
 
-    // MARK: - AppleScript 执行
-
-    private func runAppleScript(_ source: String) -> NSAppleEventDescriptor? {
-        var err: NSDictionary?
-        let script = NSAppleScript(source: source)
-        let result = script?.executeAndReturnError(&err)
-
-        if let error = err {
-            logger.error("AppleScript error: \(error)")
-        }
-
-        return result
+private func openWithApp(named appName: String, path: String) -> Bool {
+    let task = Process()
+    task.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    task.arguments = ["-a", appName, path]
+    do {
+        try task.run()
+        task.waitUntilExit()
+        logger.debug("\(appName) open \(path) exit status: \(task.terminationStatus)")
+        return task.terminationStatus == 0
+    } catch {
+        logger.error("Error opening \(appName) in \(path): \(error, privacy: .public)")
+        return false
     }
 }

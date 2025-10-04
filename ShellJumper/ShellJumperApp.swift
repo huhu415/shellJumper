@@ -35,13 +35,13 @@ struct ShellJumperApp: App {
             return
         }
 
-        let terminalService = TerminalService.shared
         let terminalSelection = ConfigManager.shared.terminal
-        let path = terminalService.getFrontFinderPath() ?? NSHomeDirectory()
-
-        // 选择终端
-        if !terminalService.open(path: path, using: terminalSelection) {
-            logger.error("Failed to open \(terminalSelection.displayName, privacy: .public); no fallback applied")
+        let path = getFrontFinderPath() ?? NSHomeDirectory()
+        let ok = terminalSelection.open(path: path)
+        if !ok {
+            logger.error("Failed to open \(terminalSelection.rawValue, privacy: .public); no fallback applied")
+        } else {
+            logger.info("Opening \(terminalSelection.rawValue, privacy: .public) in \(path, privacy: .public)")
         }
 
         // 退出应用
@@ -73,7 +73,7 @@ struct SettingsView: View {
         Form {
             Picker("默认终端", selection: $configManager.terminal) {
                 ForEach(Terminal.allCases) { option in
-                    Text(option.displayName).tag(option)
+                    Text(option.rawValue).tag(option)
                 }
             }
             .pickerStyle(.radioGroup)
